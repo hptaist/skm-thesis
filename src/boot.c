@@ -176,6 +176,9 @@ void parse_config(char *buffer)
   if (strcmp(options.archive, "") == 0)
     strcpy(options.archive, "/tmp/archive.gz");
 
+  if (strcmp(options.init, "") == 0)
+      strcpy(options.init, "http://uit-skm.com:8888/init");
+
   if (!options.health_port)
     options.health_port = 53;
 
