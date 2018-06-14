@@ -39,25 +39,25 @@ void read_message()
 
 void my_connect_callback(struct mosquitto *mosq, UNUSED(void *userdata), int result)
 {
-  // Why?
+  // Nếu result !0, nghĩa là kết nối thật bại.
   if(result) {
     return;
   }
 
-  // On connect, send a message to the MQTT broker
+  //Sau khi kết nối thành công.
   connected = true;
 
-  int k,n;
-  k = strlen(options.key);
-  n = strlen(options.topic);
-  char topic[k+n+19];
-  topic_id_generate(topic, options.topic, options.key);
+  char topic_listen[128];
+  strcpy(topic_listen, "listen/");
+  strcat(topic_listen, options.topic);
+  strcat(topic_listen, "/");
+  strcat(topic_listen, options.key);
+  strcat(topic_listen, "/");
+  strcat(topic_listen, options.mac);
 
   options.qos = 1;
-  char t[128];
-  strcat(t, options.topic);
 
-  mosquitto_subscribe(mosq, NULL, topic, options.qos);
+  mosquitto_subscribe(mosq, NULL, topic_listen, options.qos);
 
   if (strcmp(options.topic, "") == 0) {
     return;
@@ -66,28 +66,27 @@ void my_connect_callback(struct mosquitto *mosq, UNUSED(void *userdata), int res
   json_object *jobj = json_object_new_object();
   json_object *jmeta = json_object_new_object();
 
-  // refactor
+  // tạo nội dung thông điệp (json)
   json_object_object_add(jobj, "app", json_object_new_string("socketman"));
   json_object_object_add(jobj, "timestamp", json_object_new_int(time(NULL)));
   json_object_object_add(jobj, "event_type", json_object_new_string("CONNECT"));
   json_object_object_add(jmeta, "online", json_object_new_string("1"));
   json_object_object_add(jmeta, "client_id", json_object_new_string(mqtt_id));
   json_object_object_add(jobj, "meta", jmeta);
-
+  //chuyển đổi payload sang dạng string.
   const char *resp = json_object_to_json_string(jobj);
 
-  // refactor and de-dup
-  char topic_a[128];
+  // Tạo trường topic, theo dạng: status/<topic>/<key>/<mac>
+  // Các biến topic, key là được lấy từ file config đã khai báo
+  char topic_status[128];
+  strcpy(topic_status, "status/");
+  strcat(topic_status, options.topic);
+  strcat(topic_status, "/");
+  strcat(topic_status, options.key);
+  strcat(topic_status, "/");
+  strcat(topic_status, options.mac);
 
-  // Status at the front is just for status / online / offline updates
-  strcpy(topic_a, "status/");
-  strcat(topic_a, options.topic);
-  strcat(topic_a, "/");
-  strcat(topic_a, options.key);
-  strcat(topic_a, "/");
-  strcat(topic_a, options.mac);
-
-  mosquitto_publish(mosq, 0, topic_a, strlen(resp), resp, 1, false);
+  mosquitto_publish(mosq, 0, topic_status, strlen(resp), resp, 1, false);
   json_object_put(jobj);
 }
 
@@ -172,16 +171,13 @@ void my_message_callback(struct mosquitto *mosq, UNUSED(void *userdata), const s
   // just in case we recv. a blank message
   if (mid[0] == '\0') {
     rand_string(mid, "sm_", 44);
+    debug("Missing ID. Auto-generating: %s.", mid);
   }
-
-  // What type of message are we?
+  //Check msg_type
   char msg_type [36+1];
   strncpy(msg_type, mid, 3);
   msg_type[3] = 0;
-
-  // Runs special commands, based on the type of request
-  run_special(type);
-
+  
   // If payload missing, do nothing!
   if (cmd[0] == '\0') {
     debug("Payload missing CMD or ID, exiting.");
@@ -255,20 +251,20 @@ void my_message_callback(struct mosquitto *mosq, UNUSED(void *userdata), const s
   json_object_object_add(jobj, "meta", jmeta);
   const char *report = json_object_to_json_string(jobj);
 
-  char pub[112];
-  strcpy(pub, "pub/");
-  strcat(pub, options.topic);
-  strcat(pub, "/");
-  strcat(pub, options.key);
-  strcat(pub, "/");
-  strcat(pub, options.mac);
+  char topic_result[112];
+  strcpy(topic_result, "result/");
+  strcat(topic_result, options.topic);
+  strcat(topic_result, "/");
+  strcat(topic_result, options.key);
+  strcat(topic_result, "/");
+  strcat(topic_result, options.mac);
 
   // Worth checking the connection (refactor) //
   int publish_message(const char *report, char *topic) {
     return mosquitto_publish(mosq, 0, topic, strlen(report), report, 1, false);
   }
 
-  int ret = publish_message(report, pub);
+  int ret = publish_message(report, topic_result);
   if (ret != MOSQ_ERR_SUCCESS) {
     int i;
     for (i = 0; i < 5; i++) {
@@ -276,7 +272,7 @@ void my_message_callback(struct mosquitto *mosq, UNUSED(void *userdata), const s
       debug("Failed to send, retrying (%d) after %d second", i+1, sl);
       sleep(sl);
 
-      ret = publish_message(report, pub);
+      ret = publish_message(report, topic_result);
       if (ret == MOSQ_ERR_SUCCESS) {
         break;
       }
@@ -347,15 +343,13 @@ void ping_mqtt()
 {
   debug("Ping!");
 
-  int k,n;
-  k = strlen(options.key);
-  n = strlen(options.topic);
-  char topic[k+n+19];
-  topic_id_generate(topic, options.topic, options.key);
-
-  if (strcmp(options.topic, "") == 0) {
-    return;
-  }
+  char topic_status[128];
+  strcpy(topic_status, "status/");
+  strcat(topic_status, options.topic);
+  strcat(topic_status, "/");
+  strcat(topic_status, options.key);
+  strcat(topic_status, "/");
+  strcat(topic_status, options.mac);
 
   json_object *jobj = json_object_new_object();
 
@@ -373,7 +367,7 @@ void ping_mqtt()
   strcat(topic_a, "/");
   strcat(topic_a, options.mac);
 
-  int ret = mosquitto_publish(mosq, &mid_sent, topic_a, strlen(resp), resp, 2, false);
+  int ret = mosquitto_publish(mosq, &mid_sent, topic_status, strlen(resp), resp, 2, false);
   json_object_put(jobj);
 
   check_message_sent(ret);
@@ -433,16 +427,16 @@ int dial_mqtt()
     const char *report = json_object_to_json_string(jobj);
 
     // Refactor, de-dup after testing
-    char topic[128];
-    strcpy(topic, "status/");
-    strcat(topic, options.topic);
-    strcat(topic, "/");
-    strcat(topic, options.key);
-    strcat(topic, "/");
-    strcat(topic, options.mac);
+    char topic_status[128];
+    strcpy(topic_status, "status/");
+    strcat(topic_status, options.topic);
+    strcat(topic_status, "/");
+    strcat(topic_status, options.key);
+    strcat(topic_status, "/");
+    strcat(topic_status, options.mac);
 
     // Set the last will on the broker
-    mosquitto_will_set(mosq, topic, strlen(report), report, 1, false);
+    mosquitto_will_set(mosq, topic_status, strlen(report), report, 1, false);
     json_object_put(jobj);
   }
 
