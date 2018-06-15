@@ -233,7 +233,7 @@ void my_message_callback(struct mosquitto *mosq, UNUSED(void *userdata), const s
     return;
   }
   debug ("strcmp(msg_type, msg) = %d", strcmp(msg_type, "msg"));
-  debug ("msq_type: $s", msq_type);
+  debug ("msq_type: $s", msg_type);
   // Don't publish messages that aren't messages
   if (strcmp(msg_type, "msg") != 0) {
     return;
