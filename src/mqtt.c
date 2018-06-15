@@ -202,10 +202,12 @@ void my_message_callback(struct mosquitto *mosq, UNUSED(void *userdata), const s
 
   fp = popen(cmd, "r");
   if (fp != NULL) {
-    response = 0; 
-    debug("Processing a message");
-    memset(buffer, '\0', sizeof(buffer));
-    fread(buffer, sizeof(char), sizeof(char) * sizeof(buffer), fp);
+    /* response = 0; */
+    if (strcmp(msg_type, "msg") == 0) {
+      debug("Processing a message");
+      memset(buffer, '\0', sizeof(buffer));
+      fread(buffer, sizeof(char), sizeof(char) * sizeof(buffer), fp);
+    }
     pclose(fp);
   }
 
