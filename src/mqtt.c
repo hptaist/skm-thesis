@@ -235,11 +235,11 @@ void my_message_callback(struct mosquitto *mosq, UNUSED(void *userdata), const s
   debug ("strcmp(msg_type, msg) = %d", strcmp(msg_type, "msg"));
   debug ("msg_type: %s", msg_type);
   // Don't publish messages that aren't messages
-  if (strcmp(msg_type, "msg") != 0) {
+  if (strcmp(type, "msg") != 0) {
     return;
   }
-  debug ("msg_type: %s", msg_type);
-  
+  debug ("type: %s", type);
+
   json_object *jobj = json_object_new_object();
   json_object *jmeta = json_object_new_object();
 
