@@ -226,13 +226,14 @@ void my_message_callback(struct mosquitto *mosq, UNUSED(void *userdata), const s
   if (strlen(buffer) == 0) {
     strcpy(buffer, "DNE");
   }
-
+  debug ("option.rest = %d", option.rest);
   // Will publish the job back to CT via REST API
   if (options.rest) {
     cmd_notify(response, mid, buffer);
     return;
   }
-
+  debug ("strcmp(msg_type, msg) = %d", strcmp(msg_type, "msg"));
+  debug ("msq_type: $s", msq_type);
   // Don't publish messages that aren't messages
   if (strcmp(msg_type, "msg") != 0) {
     return;
