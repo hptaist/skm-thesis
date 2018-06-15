@@ -9,8 +9,8 @@ include $(TOPDIR)/rules.mk
 
 # Name and release number of this package
 PKG_NAME:=socketman
-PKG_VERSION:=2
-PKG_RELEASE:=6
+PKG_VERSION:=3
+PKG_RELEASE:=3
 
 PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
 

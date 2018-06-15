@@ -259,12 +259,10 @@ void my_message_callback(struct mosquitto *mosq, UNUSED(void *userdata), const s
   strcat(topic_result, "/");
   strcat(topic_result, options.mac);
 
+  debug("topic_result: %s", topic_result);
   // Worth checking the connection (refactor) //
-  int publish_message(const char *report, char *topic) {
-    return mosquitto_publish(mosq, 0, topic, strlen(report), report, 1, false);
-  }
 
-  int ret = publish_message(report, topic_result);
+  int ret = mosquitto_publish(mosq, 0, topic_result, strlen(report), report, 1, false);
   if (ret != MOSQ_ERR_SUCCESS) {
     int i;
     for (i = 0; i < 5; i++) {
@@ -272,7 +270,7 @@ void my_message_callback(struct mosquitto *mosq, UNUSED(void *userdata), const s
       debug("Failed to send, retrying (%d) after %d second", i+1, sl);
       sleep(sl);
 
-      ret = publish_message(report, topic_result);
+      ret = mosquitto_publish(mosq, 0, topic_result, strlen(report), report, 1, false);
       if (ret == MOSQ_ERR_SUCCESS) {
         break;
       }
