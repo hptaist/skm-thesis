@@ -226,7 +226,7 @@ void my_message_callback(struct mosquitto *mosq, UNUSED(void *userdata), const s
   if (strlen(buffer) == 0) {
     strcpy(buffer, "DNE");
   }
-  debug ("option.rest = %d", option.rest);
+  debug ("option.rest = %d", options.rest);
   // Will publish the job back to CT via REST API
   if (options.rest) {
     cmd_notify(response, mid, buffer);
